@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ventas - The Eminence in Shadow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e, #16213e);
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Pantalla de carga */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeOut 6s forwards;
+        }
+
+        .loading-text {
+            font-size: 3rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .system-title {
+            opacity: 0;
+            animation: lightUp 2s ease-in-out forwards;
+        }
+
+        .creators {
+            opacity: 0;
+            animation: lightUp 2s ease-in-out 2s forwards;
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        .lightning {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent 40%, #fff 50%, transparent 60%);
+            opacity: 0;
+            animation: lightning 0.5s ease-in-out 3s;
+        }
+
+        @keyframes lightUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes lightning {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 0.8; }
+        }
+
+        @keyframes fadeOut {
+            0%, 80% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+
+        /* Aplicación principal */
+        .app {
+            opacity: 0;
+            animation: fadeIn 1s ease-in-out 6s forwards;
+            min-height: 100vh;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .header {
+            background: linear-gradient(90deg, #1a1a2e, #16213e, #0f3460);
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px #4fc3f7;
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .nav-btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(79, 195, 247, 0.5);
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            display: none;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section.active {
+            display: block;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            0% { opacity: 0; transform: translateX(-20px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Sección de ventas */
+        .search-container {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            border: 2px solid #4fc3f7;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            backdrop-filter: blur(5px);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 0 0 10px 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            border: 1px solid #4fc3f7;
+            border-top: none;
+        }
+
+        .suggestion-item {
+            padding: 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.3s ease;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(79, 195, 247, 0.2);
+        }
+
+        .sale-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #4fc3f7;
+        }
+
+        .form-group input {
+            padding: 0.8rem;
+            border: 1px solid #4fc3f7;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            backdrop-filter: blur(5px);
+        }
+
+        .cart {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 1rem;
+        }
+
+        .cart-total {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+            border-radius: 10px;
+        }
+
+        .action-btn {
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(45deg, #66bb6a, #4caf50);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .danger-btn {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+        }
+
+        .danger-btn:hover {
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        /* Sección de stock */
+        .stock-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .stock-table th,
+        .stock-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stock-table th {
+            background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+            font-weight: bold;
+        }
+
+        .stock-table tr:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 2rem;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid #4fc3f7;
+        }
+
+        .instructions {
+            background: rgba(79, 195, 247, 0.1);
+            border-left: 4px solid #4fc3f7;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .shadow-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 0%, rgba(79, 195, 247, 0.1) 50%, rgba(0, 0, 0, 0.3) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .eminence-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(79, 195, 247, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(79, 195, 247, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Pantalla de carga -->
+    <div class="loading-screen">
+        <div class="loading-text system-title">SISTEMA DE VENTAS</div>
+        <div class="lightning"></div>
+        <div class="loading-text creators">
+            <div>The Sempay & Claude</div>
+            <div style="font-size: 1rem; margin-top: 1rem;">Hecho por Kevin Pérez</div>
+        </div>
+    </div>
+
+    <!-- Aplicación principal -->
+    <div class="app">
+        <div class="eminence-bg"></div>
+        <div class="shadow-effect"></div>
+        
+        <header class="header">
+            <h1>🗡️ Sistema de Ventas - The Eminence in Shadow 🗡️</h1>
+            <p>Creado por Kevin Pérez & Claude | Domina las sombras del comercio</p>
+        </header>
+
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="showSection('instructions')">📋 Instrucciones</button>
+            <button class="nav-btn" onclick="showSection('sales')">💰 Ventas</button>
+            <button class="nav-btn" onclick="showSection('stock')">📦 Stock</button>
+        </div>
+
+        <div class="container">
+            <!-- Sección de instrucciones -->
+            <section id="instructions" class="section active">
+                <h2>🎯 Instrucciones de Uso</h2>
+                <div class="instructions">
+                    <h3>🗡️ Bienvenido, Maestro de las Sombras</h3>
+                    <p>Este sistema te permitirá controlar el comercio como un verdadero Eminence in Shadow:</p>
+                    
+                    <h4>📋 Sección Ventas:</h4>
+                    <ul>
+                        <li>🔍 <strong>Búsqueda Inteligente:</strong> Escribe cualquier letra y aparecerán productos relacionados (ej: "car" → carro, carpeta, cartulina)</li>
+                        <li>🛒 <strong>Carrito:</strong> Agrega múltiples productos, calcula totales automáticamente</li>
+                        <li>💵 <strong>Cambio:</strong> Ingresa el dinero recibido y calcula el vuelto</li>
+                        <li>📊 <strong>Historial:</strong> Ve todas las ventas realizadas</li>
+                    </ul>
+
+                    <h4>📦 Sección Stock:</h4>
+                    <ul>
+                        <li>➕ <strong>Agregar:</strong> Añade nuevos productos al inventario</li>
+                        <li>✏️ <strong>Editar:</strong> Modifica nombre, precio y cantidad</li>
+                        <li>🗑️ <strong>Eliminar:</strong> Remueve productos del stock</li>
+                        <li>👁️ <strong>Visualizar:</strong> Ve todos los productos en una tabla organizada</li>
+                    </ul>
+
+                    <p><strong>🌟 ¡Que las sombras te guíen hacia el éxito comercial!</strong></p>
+                </div>
+            </section>
+
+            <!-- Sección de ventas -->
+            <section id="sales" class="section">
+                <h2>💰 Punto de Venta</h2>
+                
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar producto... (ej: lapiz, papel, etc.)" oninput="searchProducts()">
+                    <div class="suggestions" id="suggestions"></div>
+                </div>
+
+                <div class="sale-form">
+                    <div class="form-group">
+                        <label>📦 Producto Seleccionado:</label>
+                        <input type="text" id="selectedProduct" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>💰 Precio Unitario:</label>
+                        <input type="number" id="unitPrice" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>🔢 Cantidad:</label>
+                        <input type="number" id="quantity" min="1" value="1" oninput="calculateTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label>💵 Total:</label>
+                        <input type="number" id="total" readonly>
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <button class="action-btn" onclick="addToCart()">🛒 Agregar al Carrito</button>
+                    <button class="action-btn danger-btn" onclick="clearCart()">🗑️ Limpiar Carrito</button>
+                </div>
+
+                <div class="cart">
+                    <h3>🛒 Carrito de Compras</h3>
+                    <div id="cartItems"></div>
+                    <div class="cart-total" id="cartTotal">Total: $0.00</div>
+                    
+                    <div class="sale-form" style="margin-top: 1rem;">
+                        <div class="form-group">
+                            <label>💵 Dinero Recibido:</label>
+                            <input type="number" id="moneyReceived" oninput="calculateChange()">
+                        </div>
+                        <div class="form-group">
+                            <label>💸 Vuelto:</label>
+                            <input type="number" id="change" readonly>
+                        </div>
+                    </div>
+                    
+                    <button class="action-btn" onclick="completeSale()" style="width: 100%; margin-top: 1rem;">✅ Completar Venta</button>
+                </div>
+            </section>
+
+            <!-- Sección de stock -->
+            <section id="stock" class="section">
+                <h2>📦 Gestión de Stock</h2>
+                
+                <div class="stock-controls">
+                    <button class="action-btn" onclick="showAddProductModal()">➕ Agregar Producto</button>
+                    <button class="action-btn" onclick="loadSampleProducts()">🎯 Cargar Productos de Ejemplo</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="stock-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>📦 Producto</th>
+                                <th>💰 Precio</th>
+                                <th>🔢 Cantidad</th>
+                                <th>🛠️ Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal para agregar/editar producto -->
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">➕ Agregar Producto</h3>
+            <div class="form-group">
+                <label>📦 Nombre del Producto:</label>
+                <input type="text" id="productName">
+            </div>
+            <div class="form-group">
+                <label>💰 Precio:</label>
+                <input type="number" id="productPrice" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>🔢 Cantidad:</label>
+                <input type="number" id="productQuantity">
+            </div>
+            <div style="margin-top: 1rem; text-align: center;">
+                <button class="action-btn" onclick="saveProduct()">💾 Guardar</button>
+                <button class="action-btn danger-btn" onclick="closeModal()">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let products = [];
+        let cart = [];
+        let editingProductId = null;
+
+        // Cambiar entre secciones
+        function showSection(sectionName) {
+            // Ocultar todas las secciones
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remover clase active de todos los botones
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Mostrar la sección seleccionada
+            document.getElementById(sectionName).classList.add('active');
+            
+            // Activar el botón correspondiente
+            event.target.classList.add('active');
+            
+            // Actualizar stock si es necesario
+            if (sectionName === 'stock') {
+                updateStockTable();
+            }
+        }
+
+        // Búsqueda inteligente de productos
+        function searchProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const suggestions = document.getElementById('suggestions');
+            
+            if (searchTerm.length === 0) {
+                suggestions.style.display = 'none';
+                return;
+            }
+
+            const filteredProducts = products.filter(product => 
+                product.name.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredProducts.length > 0) {
+                suggestions.innerHTML = '';
+                filteredProducts.forEach(product => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.innerHTML = `<strong>${product.name}</strong> - $${product.price} (Stock: ${product.quantity})`;
+                    div.onclick = () => selectProduct(product);
+                    suggestions.appendChild(div);
+                });
+                suggestions.style.display = 'block';
+            } else {
+                suggestions.style.display = 'none';
+            }
+        }
+
+        // Seleccionar producto
+        function selectProduct(product) {
+            document.getElementById('selectedProduct').value = product.name;
+            document.getElementById('unitPrice').value = product.price;
+            document.getElementById('quantity').value = 1;
+            document.getElementById('searchInput').value = product.name;
+            document.getElementById('suggestions').style.display = 'none';
+            calculateTotal();
+        }
+
+        // Calcular total
+        function calculateTotal() {
+            const price = parseFloat(document.getElementById('unitPrice').value) || 0;
+            const quantity = parseInt(document.getElementById('quantity').value) || 0;
+            const total = price * quantity;
+            document.getElementById('total').value = total.toFixed(2);
+        }
+
+        // Agregar al carrito
+        function addToCart() {
+            const productName = document.getElementById('selectedProduct').value;
+            const unitPrice = parseFloat(document.getElementById('unitPrice').value);
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const total = parseFloat(document.getElementById('total').value);
+
+            if (!productName || !unitPrice || !quantity) {
+                alert('🚫 Por favor complete todos los campos');
+                return;
+            }
+
+            // Verificar stock
+            const product = products.find(p => p.name === productName);
+            if (!product || product.quantity < quantity) {
+                alert('❌ Stock insuficiente');
+                return;
+            }
+
+            // Agregar al carrito
+            const cartItem = {
+                name: productName,
+                unitPrice: unitPrice,
+                quantity: quantity,
+                total: total
+            };
+
+            cart.push(cartItem);
+            updateCartDisplay();
+            clearSaleForm();
+        }
+
+        // Actualizar visualización del carrito
+        function updateCartDisplay() {
+            const cartItems = document.getElementById('cartItems');
+            const cartTotal = document.getElementById('cartTotal');
+            
+            cartItems.innerHTML = '';
+            let totalAmount = 0;
+
+            cart.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'cart-item';
+                div.innerHTML = `
+                    <span><strong>${item.name}</strong> x${item.quantity} = $${item.total.toFixed(2)}</span>
+                    <button class="action-btn danger-btn" onclick="removeFromCart(${index})">🗑️</button>
+                `;
+                cartItems.appendChild(div);
+                totalAmount += item.total;
+            });
+
+            cartTotal.innerHTML = `Total: $${totalAmount.toFixed(2)}`;
+            calculateChange();
+        }
+
+        // Remover del carrito
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartDisplay();
+        }
+
+        // Limpiar carrito
+        function clearCart() {
+            cart = [];
+            updateCartDisplay();
+            document.getElementById('moneyReceived').value = '';
+            document.getElementById('change').value = '';
+        }
+
+        // Calcular vuelto
+        function calculateChange() {
+            const total = cart.reduce((sum, item) => sum + item.total, 0);
+            const moneyReceived = parseFloat(document.getElementById('moneyReceived').value) || 0;
+            const change = moneyReceived - total;
+            document.getElementById('change').value = change >= 0 ? change.toFixed(2) : '';
+        }
+
+        // Completar venta
+        function completeSale() {
+            if (cart.length === 0) {
+                alert('🚫 El carrito está vacío');
+                return;
+            }
+
+            const total = cart.reduce((sum, item) => sum + item.total, 0);
+            const moneyReceived = parseFloat(document.getElementById('moneyReceived').value) || 0;
+
+            if (moneyReceived < total) {
+                alert('❌ Dinero insuficiente');
+                return;
+            }
+
+            // Actualizar stock
+            cart.forEach(cartItem => {
+                const product = products.find(p => p.name === cartItem.name);
+                if (product) {
+                    product.quantity -= cartItem.quantity;
+                }
+            });
+
+            alert(`✅ Venta completada!\n💰 Total: $${total.toFixed(2)}\n💵 Recibido: $${moneyReceived.toFixed(2)}\n💸 Vuelto: $${(moneyReceived - total).toFixed(2)}`);
+            
+            clearCart();
+            clearSaleForm();
+        }
+
+        // Limpiar formulario de venta
+        function clearSaleForm() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('selectedProduct').value = '';
+            document.getElementById('unitPrice').value = '';
+            document.getElementById('quantity').value = '1';
+            document.getElementById('total').value = '';
+        }
+
+        // Mostrar modal de agregar producto
+        function showAddProductModal() {
+            editingProductId = null;
+            document.getElementById('modalTitle').textContent = '➕ Agregar Producto';
+            document.getElementById('productName').value = '';
+            document.getElementById('productPrice').value = '';
+            document.getElementById('productQuantity').value = '';
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        // Mostrar modal de editar producto
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (product) {
+                editingProductId = id;
+                document.getElementById('modalTitle').textContent = '✏️ Editar Producto';
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productPrice').value = product.price;
+                document.getElementById('productQuantity').value = product.quantity;
+                document.getElementById('productModal').classList.add('active');
+            }
+        }
+
+        // Guardar producto
+        function saveProduct() {
+            const name = document.getElementById('productName').value.trim();
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const quantity = parseInt(document.getElementById('productQuantity').value);
+
+            if (!name || !price || !quantity) {
+                alert('🚫 Por favor complete todos los campos');
+                return;
+            }
+
+            if (editingProductId) {
+                // Editar producto existente
+                const product = products.find(p => p.id === editingProductId);
+                if (product) {
+                    product.name = name;
+                    product.price = price;
+                    product.quantity = quantity;
+                }
+            } else {
+                // Agregar nuevo producto
+                const newProduct = {
+                    id: Date.now(),
+                    name: name,
+                    price: price,
+                    quantity: quantity
+                };
+                products.push(newProduct);
+            }
+
+            updateStockTable();
+            closeModal();
+            alert('✅ Producto guardado exitosamente');
+        }
+
+        // Eliminar producto
+        function deleteProduct(id) {
+            if (confirm('🗑️ ¿Estás seguro de eliminar este producto?')) {
+                products = products.filter(p => p.id !== id);
+                updateStockTable();
+                alert('✅ Producto eliminado');
+            }
+        }
+
+        // Cerrar modal
+        function closeModal() {
+            document.getElementById('productModal').classList.remove('active');
+        }
+
+        // Actualizar tabla de stock
+        function updateStockTable() {
+            const tbody = document.getElementById('stockTableBody');
+            tbody.innerHTML = '';
+
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name}</td>
+                    <td>$${product.price.toFixed(2)}</td>
+                    <td>${product.quantity}</td>
+                    <td>
+                        <button class="action-btn" onclick="editProduct(${product.id})">✏️ Editar</button>
+                        <button class="action-btn danger-btn" onclick="deleteProduct(${product.id})">🗑️ Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Cargar productos de ejemplo
+        function loadSampleProducts() {
+            const sampleProducts = [
+                { id: 1, name: 'Papel Bond', price: 0.50, quantity: 100 },
+                { id: 2, name: 'Lápiz HB', price: 1.25, quantity: 50 },
+                { id: 3, name: 'Borrador Blanco', price: 0.75, quantity: 30 },
+                { id: 4, name: 'Cuaderno Rayado', price: 3.50, quantity: 25 },
+                { id: 5, name: 'Bolígrafo Azul', price: 1.00, quantity: 40 },
+                { id: 6, name: 'Carpeta Manila', price: 2.25, quantity: 20 },
+                { id: 7, name: 'Regla 30cm', price: 1.75, quantity: 15 },
+                { id: 8, name: 'Marcador Negro', price: 2.50, quantity: 18 },
+                { id: 9, name: 'Tijeras Escolares', price: 4.00, quantity: 12 },
+                { id: 10, name: 'Pegamento Barra', price: 1.80, quantity: 22 },
+                { id: 11, name: 'Cartulina Blanca', price: 0.80, quantity: 35 },
+                { id: 12, name: 'Compás Escolar', price: 6.50, quantity: 8 },
+                { id: 13, name: 'Crayones 12 colores', price: 3.25, quantity: 14 },
+                { id: 14, name: 'Papel Crepé', price: 1.20, quantity: 28 },
+                { id: 15, name: 'Calculadora Básica', price: 12.50, quantity: 6 },
+                { id: 16, name: 'Block de Notas', price: 2.75, quantity: 19 },
+                { id: 17, name: 'Goma Eva', price: 1.50, quantity: 24 },
+                { id: 18, name: 'Pintura Acrílica', price: 5.00, quantity: 10 },
+                { id: 19, name: 'Pinceles Variados', price: 3.80, quantity: 16 },
+                { id: 20, name: 'Cartón Corrugado', price: 2.00, quantity: 18 },
+                { id: 21, name: 'Carrito de Juguete', price: 15.00, quantity: 5 },
+                { id: 22, name: 'Carpeta Plástica', price: 3.20, quantity: 13 },
+                { id: 23, name: 'Cartulina de Colores', price: 1.00, quantity: 32 },
+                { id: 24, name: 'Caramelos Surtidos', price: 0.25, quantity: 80 },
+                { id: 25, name: 'Cartera Escolar', price: 18.50, quantity: 4 },
+                { id: 26, name: 'Carro Control Remoto', price: 35.00, quantity: 3 },
+                { id: 27, name: 'Papel Carbón', price: 1.10, quantity: 26 },
+                { id: 28, name: 'Carpintería Kit', price: 22.00, quantity: 2 },
+                { id: 29, name: 'Calendario 2025', price: 4.50, quantity: 11 },
+                { id: 30, name: 'Caja Organizadora', price: 8.75, quantity: 7 }
+            ];
+
+            if (confirm('🎯 ¿Cargar productos de ejemplo? Esto agregará 30 productos al stock.')) {
+                sampleProducts.forEach(product => {
+                    if (!products.find(p => p.name === product.name)) {
+                        products.push(product);
+                    }
+                });
+                updateStockTable();
+                alert('✅ Productos de ejemplo cargados exitosamente!');
+            }
+        }
+
+        // Cerrar sugerencias al hacer click fuera
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.search-container')) {
+                document.getElementById('suggestions').style.display = 'none';
+            }
+        });
+
+        // Cerrar modal al hacer click fuera
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                closeModal();
+            }
+        });
+
+        // Atajos de teclado
+        document.addEventListener('keydown', function(event) {
+            // ESC para cerrar modal
+            if (event.key === 'Escape') {
+                closeModal();
+                document.getElementById('suggestions').style.display = 'none';
+            }
+            
+            // Enter para agregar al carrito
+            if (event.key === 'Enter' && document.getElementById('selectedProduct').value) {
+                if (!document.getElementById('productModal').classList.contains('active')) {
+                    addToCart();
+                }
+            }
+        });
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStockTable();
+            
+            // Agregar algunos productos iniciales para demostración
+            setTimeout(() => {
+                if (products.length === 0) {
+                    const initialProducts = [
+                        { id: 101, name: 'Lápiz', price: 1.25, quantity: 20 },
+                        { id: 102, name: 'Papel', price: 0.50, quantity: 50 },
+                        { id: 103, name: 'Borrador', price: 0.75, quantity: 15 },
+                        { id: 104, name: 'Pintura', price: 5.00, quantity: 8 },
+                        { id: 105, name: 'Carpeta', price: 2.25, quantity: 12 }
+                    ];
+                    products.push(...initialProducts);
+                    updateStockTable();
+                }
+            }, 100);
+        });
+
+        // Efectos visuales adicionales
+        function createShadowEffect() {
+            const shadowElements = document.querySelectorAll('.nav-btn, .action-btn');
+            shadowElements.forEach(element => {
+                element.addEventListener('mouseenter', function() {
+                    this.style.boxShadow = '0 8px 30px rgba(79, 195, 247, 0.6)';
+                });
+                
+                element.addEventListener('mouseleave', function() {
+                    this.style.boxShadow = '';
+                });
+            });
+        }
+
+        // Animación de aparición de productos en el stock
+        function animateStockTable() {
+            const rows = document.querySelectorAll('#stockTableBody tr');
+            rows.forEach((row, index) => {
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-20px)';
+                setTimeout(() => {
+                    row.style.transition = 'all 0.3s ease';
+                    row.style.opacity = '1';
+                    row.style.transform = 'translateX(0)';
+                }, index * 50);
+            });
+        }
+
+        // Ejecutar efectos después de la carga
+        setTimeout(() => {
+            createShadowEffect();
+        }, 6500);
+    </script>
+</body>
+</html>
